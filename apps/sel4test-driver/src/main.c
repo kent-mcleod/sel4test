@@ -593,6 +593,13 @@ static void sel4test_exit(int code)
     seL4_TCB_Suspend(seL4_CapInitThreadTCB);
 }
 
+#ifdef CONFIG_ARCH_X86
+
+extern void *rsdp;
+#endif
+
+
+
 int main(void)
 {
     /* Set exit handler */
@@ -634,6 +641,25 @@ int main(void)
     platsupport_serial_setup_simple(&env.vspace, &env.simple, &env.vka);
     serial_utspace_record = false;
 
+    simple_print(&env.simple);
+    /* start of the extended bootinfo is defined to be 4K from the start of regular bootinfo */
+    uintptr_t cur = (uintptr_t)info + PAGE_SIZE_4K;
+    uintptr_t end = cur + info->extraLen;
+    while (cur < end) {
+        seL4_BootInfoHeader *header = (seL4_BootInfoHeader *)cur;
+        if (header->id == SEL4_BOOTINFO_HEADER_X86_ACPI_RSDP) {
+            rsdp = (void *)(cur + sizeof(seL4_BootInfoHeader));
+            break;
+        }
+        cur += header->len;
+    }
+    if (!rsdp) {
+        printf("Errorr finding rsdp\n");
+    } else {
+        printf("RSDP_PADDR: %p\n", rsdp);
+    }
+
+
     /* Partially overwrite the IRQ interface so that we can record the IRQ caps that were allocated.
      * We need this only for the timer as the ltimer interfaces allocates the caps for us and hides them away.
      * A few of the tests require actual interactions with the caps hence we record them.
@@ -645,7 +671,6 @@ int main(void)
     /* Restore the IRQ interface's register function */
     env.ops.irq_ops.irq_register_fn = irq_register_fn_copy;
 
-    simple_print(&env.simple);
 
     /* switch to a bigger, safer stack with a guard page
      * before starting the tests */
