@@ -38,6 +38,11 @@ if(NOT "${PLATFORM}" IN_LIST valid_platforms)
 Valid platforms are: \"${valid_platforms}\"")
 endif()
 
+if (NOT "${OVERLAY}" STREQUAL "")
+    set(KernelCustomDTSOverlay "${OVERLAY}")
+    message("${KernelCustomDTSOverlay}")
+endif()
+
 # Declare a cache variable that enables/disablings the forcing of cache variables to
 # the specific test values. By default it is disabled
 set(Sel4testAllowSettingsOverride OFF CACHE BOOL "Allow user to override configuration settings")
